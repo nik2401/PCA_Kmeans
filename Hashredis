@@ -1,0 +1,111 @@
+1️⃣ Redis HASH basics (the stuff you must know)
+HSET — write/update a hash
+HSET sample_jobQueue:ticket:102 priority High
+
+
+What it does:
+
+Creates the field if it doesn’t exist
+
+Updates it if it does
+
+Multiple fields at once:
+
+HSET sample_jobQueue:ticket:102 status Open owner Naman
+
+HGET — read one field
+HGET sample_jobQueue:ticket:102 priority
+
+HGETALL — read everything
+HGETALL sample_jobQueue:ticket:102
+
+HDEL — delete a field
+HDEL sample_jobQueue:ticket:102 owner
+
+HEXISTS — check if a field exists
+HEXISTS sample_jobQueue:ticket:102 priority
+
+HLEN — number of fields
+HLEN sample_jobQueue:ticket:102
+
+HKEYS / HVALS
+HKEYS sample_jobQueue:ticket:102
+HVALS sample_jobQueue:ticket:102
+
+2️⃣ Sorting in Redis (important truth)
+
+⚠️ Hashes cannot be sorted directly.
+
+Redis does NOT support:
+
+SORT hash
+
+Correct ways to “sort hash data”:
+
+Store sortable values in a Sorted Set
+
+Or use RediSearch
+
+Example using Sorted Set:
+
+ZADD ticket_priority 1 ticket:101 2 ticket:102 3 ticket:103
+ZRANGE ticket_priority 0 -1 WITHSCORES
+
+3️⃣ What your EVAL command is doing (step-by-step)
+
+You ran:
+
+EVAL "
+local sum_a = 0
+for i = 1,6 do
+  local user_values = tonumber(
+    redis.call('HGET','User:USER'..i,'A')
+  )
+  sum_a = sum_a + user_values
+end
+return sum_a
+" 0
+
+What this means in plain English:
+
+1️⃣ sum_a = 0
+→ Start a counter
+
+2️⃣ for i = 1,6 do
+→ Loop from 1 to 6
+→ i = 1, 2, 3, 4, 5, 6
+
+3️⃣ 'User:USER'..i
+→ Builds key names:
+
+User:USER1
+User:USER2
+User:USER3
+...
+User:USER6
+
+
+4️⃣ HGET key A
+→ Gets field A from each hash
+
+5️⃣ tonumber(...)
+→ Converts string → number
+
+6️⃣ sum_a = sum_a + user_values
+→ Adds all values of A
+
+7️⃣ return sum_a
+→ Returns total sum
+
+Example data it expects
+HSET User:USER1 A 10
+HSET User:USER2 A 20
+HSET User:USER3 A 30
+HSET User:USER4 A 40
+HSET User:USER5 A 50
+HSET User:USER6 A 60
+
+
+Result:
+
+210
