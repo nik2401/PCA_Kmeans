@@ -1,0 +1,137 @@
+Category 1: Indexing (LoadDocument)
+These questions test your ability to index a field from a related document (e.g., "Search X by Y's Name").
+1. Search Employees by Supervisor's Name
+Task: Create an index to search for employees based on their superior's last name.
+Goal: Allow query where BossName == 'Buchanan'.
+Answer (Map):
+JavaScript
+from e in docs.Employees
+let boss = LoadDocument(e.ReportsTo, "Employees")
+select new {
+    BossName = boss.LastName
+}
+
+
+2. Search Products by Supplier's Name
+Task: Create an index to search products by the name of their supplier.
+Goal: Allow query where SupplierName == 'Exotic Liquids'.
+Answer (Map):
+JavaScript
+from p in docs.Products
+let s = LoadDocument(p.Supplier, "Suppliers")
+select new {
+    SupplierName = s.Name
+}
+
+
+3. Search Orders by Employee's Name
+Task: Create an index to search orders by the last name of the employee who processed it.
+Goal: Allow query where EmployeeName == 'Davolio'.
+Answer (Map):
+JavaScript
+from o in docs.Orders
+let e = LoadDocument(o.Employee, "Employees")
+select new {
+    EmployeeName = e.LastName
+}
+
+
+
+Category 2: Map-Reduce Aggregation
+These questions require you to calculate an average across a group (Team).
+4. Average Height by Team
+Task: Which team has the tallest/shortest players on average?
+Answer (Map):
+JavaScript
+from p in docs.Mlb_players
+select new {
+    Team = p.Team,
+    Count = 1,
+    TotalHeight = p.BodyHeight // Verify exact field name in your JSON
+}
+
+
+Answer (Reduce):
+JavaScript
+from r in results
+group r by r.Team into g
+select new {
+    Team = g.Key,
+    Count = g.Sum(x => x.Count),
+    TotalHeight = g.Sum(x => x.TotalHeight),
+    AverageHeight = g.Sum(x => x.TotalHeight) / g.Sum(x => x.Count)
+}
+
+
+Query: from index 'YourIndexName' order by AverageHeight desc limit 1
+5. Average Weight by Team
+Task: Which team has the heaviest players on average?
+Answer: Use the exact same Map-Reduce code as above, but replace BodyHeight with BodyWeight (or Weight).
+
+Category 3: Patching (Updates)
+These questions require you to write a JavaScript script to update data.
+6. Replace Team Abbreviations
+Task: Replace the abbreviation "BAL" with "Baltimore Orioles" (or "CWS" with "Chicago White Sox") for all players.
+Answer (Patch Script):
+JavaScript
+if (this.Team == "BAL") {
+    this.Team = "Baltimore Orioles";
+}
+else if (this.Team == "CWS") {
+    this.Team = "Chicago White Sox";
+}
+
+
+7. Add Team Full Name Attribute
+Task: Add a new attribute TeamFullName to the Players collection based on the abbreviation.
+Answer (Patch Script):
+JavaScript
+if (this.Team == "TEX") {
+    this.TeamFullName = "Rangers";
+}
+
+
+
+Category 4: RQL Queries (Simple Counts)
+These questions ask you to find a specific number of documents.
+8. Count Orders with Specific Product
+Task: How many orders contain the product "Vegie-spread" (or "Filo Mix", "Pavlova", "Maxilaku")?
+Answer (Query):
+SQL
+from Orders
+where Lines[].ProductName = 'Vegie-spread'
+
+
+9. List Discontinued Products
+Task: Return a list of all discontinued products ordered by stock level (highest to lowest).
+Answer (Query):
+SQL
+from Products
+where Discontinued = true
+order by UnitsInStock desc
+
+
+10. List Products with Category Names
+Task: Return a list of products and their category names (e.g., "Tofu - Produce").
+Answer (Query):
+SQL
+from Products as p
+load p.Category as c
+select {
+    Product: p.Name,
+    Category: c.Name
+}
+
+
+11. List Employees and Superiors
+Task: Return a list of employees and their boss's name.
+Answer (Query):
+SQL
+from Employees as e
+load e.ReportsTo as boss
+select {
+    Employee: e.LastName,
+    Boss: boss.LastName
+}
+
+
